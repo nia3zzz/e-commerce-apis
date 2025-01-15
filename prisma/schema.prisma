@@ -1,0 +1,105 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id              String    @id @default(uuid())
+    firstName       String
+    lastName        String?
+    username        String    @unique
+    email           String    @unique
+    password        String
+    profileImageUrl String    @default("https://i.pinimg.com/280x280_RS/e1/08/21/e10821c74b533d465ba888ea66daa30f.jpg")
+    isAdmin         Boolean   @default(false)
+    createdAt       DateTime  @default(now())
+    addressId       String?
+    addresses       Address[]
+    orders          Order[]
+    reviews         Review[]
+}
+
+model Product {
+    id            String      @id @default(uuid())
+    name          String
+    description   String
+    price         Float
+    categoryId    String
+    stock         Int?        @default(0)
+    imagesUrl     String[]
+    averageRating Float?
+    createdAt     DateTime    @default(now())
+    updatedAt     DateTime    @updatedAt
+    category      Category    @relation(fields: [categoryId], references: [id])
+    orderItems    OrderItem[]
+    reviews       Review[]
+}
+
+model Address {
+    id         String  @id @default(uuid())
+    userId     String
+    street     String
+    city       String
+    state      String
+    postalCode String
+    country    String
+    user       User    @relation(fields: [userId], references: [id])
+    orders     Order[]
+}
+
+model Category {
+    id            String    @id @default(uuid())
+    name          String
+    description   String
+    totalProducts Int       @default(0)
+    createdAt     DateTime  @default(now())
+    products      Product[]
+}
+
+model Order {
+    id                String        @id @default(uuid())
+    userId            String
+    orderDate         DateTime      @default(now())
+    totalAmount       Float
+    status            OrderStatus   @default(PENDING)
+    shippingAddressId String
+    paymentMethod     PaymentMethod
+    user              User          @relation(fields: [userId], references: [id])
+    shippingAddress   Address       @relation(fields: [shippingAddressId], references: [id])
+    orderItems        OrderItem[]
+}
+
+model OrderItem {
+    id        String  @id @default(uuid())
+    orderId   String
+    productId String
+    quantity  Int
+    price     Float
+    order     Order   @relation(fields: [orderId], references: [id])
+    product   Product @relation(fields: [productId], references: [id])
+}
+
+model Review {
+    id        String   @id @default(uuid())
+    productId String
+    userId    String
+    rating    Int
+    comment   String
+    createdAt DateTime @default(now())
+    product   Product  @relation(fields: [productId], references: [id])
+    user      User     @relation(fields: [userId], references: [id])
+}
+
+enum OrderStatus {
+    PENDING
+    COMPLETED
+}
+
+enum PaymentMethod {
+    COD
+    ONLINE
+}
