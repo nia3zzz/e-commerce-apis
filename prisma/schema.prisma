@@ -7,60 +7,67 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model User {
-    id              String    @id @default(uuid())
+model Users {
+    id              String     @id @default(uuid())
     firstName       String
     lastName        String?
-    username        String    @unique
-    email           String    @unique
+    username        String     @unique
+    email           String     @unique
     password        String
-    profileImageUrl String    @default("https://i.pinimg.com/280x280_RS/e1/08/21/e10821c74b533d465ba888ea66daa30f.jpg")
-    isAdmin         Boolean   @default(false)
-    createdAt       DateTime  @default(now())
+    profileImageUrl String     @default("https://i.pinimg.com/280x280_RS/e1/08/21/e10821c74b533d465ba888ea66daa30f.jpg")
+    isAdmin         Boolean    @default(false)
+    createdAt       DateTime   @default(now())
+    updatedAt       DateTime   @updatedAt
     addressId       String?
     addresses       Address[]
-    orders          Order[]
-    reviews         Review[]
+    orders          Orders[]
+    reviews         Reviews[]
+    sessions        Sessions[]
+    carts           Carts[]
 }
 
 model Product {
-    id            String      @id @default(uuid())
+    id            String       @id @default(uuid())
     name          String
     description   String
     price         Float
     categoryId    String
-    stock         Int?        @default(0)
+    stock         Int          @default(0)
     imagesUrl     String[]
     averageRating Float?
-    createdAt     DateTime    @default(now())
-    updatedAt     DateTime    @updatedAt
-    category      Category    @relation(fields: [categoryId], references: [id])
-    orderItems    OrderItem[]
-    reviews       Review[]
+    createdAt     DateTime     @default(now())
+    updatedAt     DateTime     @updatedAt
+    category      Categorys    @relation(fields: [categoryId], references: [id])
+    orderItems    OrderItems[]
+    reviews       Reviews[]
+    cartItems     cartItems[]
 }
 
 model Address {
-    id         String  @id @default(uuid())
+    id         String   @id @default(uuid())
     userId     String
     street     String
     city       String
     state      String
     postalCode String
     country    String
-    user       User    @relation(fields: [userId], references: [id])
-    orders     Order[]
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+    user       Users    @relation(fields: [userId], references: [id])
+    orders     Orders[]
 }
 
-model Category {
+model Categorys {
     id            String    @id @default(uuid())
     name          String
     description   String
     totalProducts Int       @default(0)
     createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
     products      Product[]
 }
 
-model Order {
+model Orders {
     id                String        @id @default(uuid())
     userId            String
     orderDate         DateTime      @default(now())
@@ -68,30 +75,66 @@ model Order {
     status            OrderStatus   @default(PENDING)
     shippingAddressId String
     paymentMethod     PaymentMethod
-    user              User          @relation(fields: [userId], references: [id])
+    createdAt         DateTime      @default(now())
+    updatedAt         DateTime      @updatedAt
+    user              Users         @relation(fields: [userId], references: [id])
     shippingAddress   Address       @relation(fields: [shippingAddressId], references: [id])
-    orderItems        OrderItem[]
+    orderItems        OrderItems[]
 }
 
-model OrderItem {
-    id        String  @id @default(uuid())
+model OrderItems {
+    id        String   @id @default(uuid())
     orderId   String
     productId String
     quantity  Int
     price     Float
-    order     Order   @relation(fields: [orderId], references: [id])
-    product   Product @relation(fields: [productId], references: [id])
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    order     Orders   @relation(fields: [orderId], references: [id])
+    product   Product  @relation(fields: [productId], references: [id])
 }
 
-model Review {
+model Reviews {
     id        String   @id @default(uuid())
     productId String
     userId    String
     rating    Int
     comment   String
     createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
     product   Product  @relation(fields: [productId], references: [id])
-    user      User     @relation(fields: [userId], references: [id])
+    user      Users    @relation(fields: [userId], references: [id])
+}
+
+model Carts {
+    id        String      @id @default(uuid())
+    userId    String
+    createdAt DateTime    @default(now())
+    updatedAt DateTime    @updatedAt
+    user      Users       @relation(fields: [userId], references: [id])
+    cartItems cartItems[]
+}
+
+model cartItems {
+    id        String   @id @default(uuid())
+    cartId    String
+    productId String
+    quantity  Int
+    price     Float
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    cart      Carts    @relation(fields: [cartId], references: [id])
+    product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Sessions {
+    id        String   @id @default(cuid())
+    userId    String
+    user      Users    @relation(fields: [userId], references: [id])
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    expiresAt DateTime
+    isRevoked Boolean  @default(false)
 }
 
 enum OrderStatus {
