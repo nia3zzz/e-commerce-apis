@@ -49,6 +49,16 @@ export class AuthGuard implements CanActivate {
       );
     }
 
+    if (!foundUser.isAdmin) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Unauthorized',
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
     const foundSession: Sessions | null = await this.prisma.sessions.findFirst({
       where: {
         userId: userId,
