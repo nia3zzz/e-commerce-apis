@@ -1,12 +1,15 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Users } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { createUserZod } from './user.zod';
-import * as bcrypt from 'bcryptjs';
+import { createUserZod, loginUserZod } from './user.zod';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
   createUser = async (
     data: typeof createUserZod,
@@ -61,13 +64,11 @@ export class UserService {
     }
 
     try {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(
+      const hashedPassword: string = await this.authService.hashPassword(
         validateData.data.password,
-        salt,
       );
 
-      const user = await this.prisma.users.create({
+      const user: Users = await this.prisma.users.create({
         data: {
           firstName: validateData.data.firstName,
           lastName: validateData.data.lastName,
@@ -87,6 +88,74 @@ export class UserService {
         {
           state: 'error',
           message: 'Something went wrong',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  login = async (data: typeof loginUserZod): Promise<string> => {
+    const validateData = loginUserZod.safeParse(data);
+
+    if (!validateData.success) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Failed in type validation.',
+          errors: validateData.error.errors[0].message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    let user: Users | null = null;
+
+    if (validateData.data.email) {
+      user = await this.prisma.users.findUnique({
+        where: {
+          email: validateData.data.email,
+        },
+      });
+    } else if (validateData.data.userName) {
+      user = await this.prisma.users.findUnique({
+        where: { userName: validateData.data.userName },
+      });
+    }
+
+    if (!user) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Invalid Credentials.',
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const isMatchedPassword: boolean = await this.authService.verifyPassword(
+      validateData.data.password,
+      user.password,
+    );
+
+    if (!isMatchedPassword) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Invalid Credentials.',
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    try {
+      const token: Promise<string> = this.authService.generateToken(user.id);
+
+      return token;
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );

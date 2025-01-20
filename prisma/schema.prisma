@@ -40,7 +40,7 @@ model Products {
     category      Categorys    @relation(fields: [categoryId], references: [id])
     orderItems    OrderItems[]
     reviews       Reviews[]
-    cartItems     cartItems[]
+    cartItems     CartItems[]
 }
 
 model Address {
@@ -58,12 +58,12 @@ model Address {
 }
 
 model Categorys {
-    id            String    @id @default(uuid())
+    id            String     @id @default(uuid())
     name          String
     description   String
-    totalProducts Int       @default(0)
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @updatedAt
+    totalProducts Int        @default(0)
+    createdAt     DateTime   @default(now())
+    updatedAt     DateTime   @updatedAt
     products      Products[]
 }
 
@@ -91,7 +91,7 @@ model OrderItems {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     order     Orders   @relation(fields: [orderId], references: [id])
-    product   Products  @relation(fields: [productId], references: [id])
+    product   Products @relation(fields: [productId], references: [id])
 }
 
 model Reviews {
@@ -102,7 +102,7 @@ model Reviews {
     comment   String
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    product   Products  @relation(fields: [productId], references: [id])
+    product   Products @relation(fields: [productId], references: [id])
     user      Users    @relation(fields: [userId], references: [id])
 }
 
@@ -112,10 +112,10 @@ model Carts {
     createdAt DateTime    @default(now())
     updatedAt DateTime    @updatedAt
     user      Users       @relation(fields: [userId], references: [id])
-    cartItems cartItems[]
+    cartItems CartItems[]
 }
 
-model cartItems {
+model CartItems {
     id        String   @id @default(uuid())
     cartId    String
     productId String
@@ -124,12 +124,13 @@ model cartItems {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     cart      Carts    @relation(fields: [cartId], references: [id])
-    product   Products  @relation(fields: [productId], references: [id])
+    product   Products @relation(fields: [productId], references: [id])
 }
 
 model Sessions {
     id        String   @id @default(cuid())
     userId    String
+    token     String
     user      Users    @relation(fields: [userId], references: [id])
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
