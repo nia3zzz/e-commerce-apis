@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { createCategoryZod } from './admin.zod';
 import { AdminAuthGuard } from './admin.guard';
@@ -12,4 +12,10 @@ export class AdminController {
   createCategory(@Body() data: typeof createCategoryZod) {
     return this.adminService.createCategory(data);
   }
+
+  @UseGuards(AdminAuthGuard)
+  @Get('/category')
+  getCategories() {
+    return this.adminService.getCategories();
+}
 }

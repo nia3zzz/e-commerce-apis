@@ -7,7 +7,13 @@ import { Categorys } from '@prisma/client';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  createCategory = async (data: typeof createCategoryZod) => {
+  createCategory = async (
+    data: typeof createCategoryZod,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: Categorys;
+  }> => {
     const validateData = createCategoryZod.safeParse(data);
 
     if (!validateData.success) {
@@ -50,6 +56,30 @@ export class AdminService {
         state: 'success',
         message: 'Category has been added.',
         data: category,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  getCategories = async (): Promise<{
+    state: string;
+    message: string;
+    data: Categorys[];
+  }> => {
+    try {
+      const categories: Categorys[] = await this.prisma.categorys.findMany();
+
+      return {
+        state: 'success',
+        message: 'Data has been found.',
+        data: categories,
       };
     } catch (error) {
       throw new HttpException(
