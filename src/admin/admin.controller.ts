@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -31,5 +32,11 @@ export class AdminController {
   @Put('/category/:id')
   updateCategory(@Body() data: typeof updateCategoryZod, @Param() params: any) {
     return this.adminService.updateCategory(data, params.id);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Delete('/category/:id')
+  deleteCategory(@Param() params: any) {
+    return this.adminService.deleteCategory(params.id);
   }
 }

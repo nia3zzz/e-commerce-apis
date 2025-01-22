@@ -95,7 +95,11 @@ export class AdminService {
   updateCategory = async (
     data: typeof updateCategoryZod,
     categoryId: string,
-  ) => {
+  ): Promise<{
+    state: string;
+    message: string;
+    data: Categorys;
+  }> => {
     const validateData = updateCategoryZod.safeParse(data);
 
     if (!validateData.success) {
@@ -153,6 +157,50 @@ export class AdminService {
         state: 'success',
         message: 'Category has been updated.',
         data: updatedCategory,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  deleteCategory = async (
+    categoryId: string,
+  ): Promise<{
+    state: string;
+    message: string;
+  }> => {
+    const category: Categorys | null = await this.prisma.categorys.findUnique({
+      where: {
+        id: categoryId,
+      },
+    });
+
+    if (!category?.id) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Category not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    try {
+      await this.prisma.categorys.delete({
+        where: {
+          id: categoryId,
+        },
+      });
+
+      return {
+        state: 'success',
+        message: 'Category has been deleted.',
       };
     } catch (error) {
       throw new HttpException(
