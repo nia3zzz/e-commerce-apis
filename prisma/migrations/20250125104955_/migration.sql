@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Products" ALTER COLUMN "stock" SET DEFAULT '0',
+ALTER COLUMN "stock" SET DATA TYPE TEXT;

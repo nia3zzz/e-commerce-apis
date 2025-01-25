@@ -13,6 +13,7 @@ import {
   createCategoryZod,
   updateCategoryZod,
   createProductZod,
+  updateProductZod,
 } from './admin.zod';
 import { AdminAuthGuard } from './admin.guard';
 import { FormDataRequest, FileSystemStoredFile } from 'nestjs-form-data';
@@ -51,5 +52,14 @@ export class AdminController {
   @FormDataRequest({ storage: FileSystemStoredFile })
   async createProduct(@Body() data: z.infer<typeof createProductZod>) {
     return this.adminService.createProduct(data);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Put('/product/:id')
+  deleteProduct(
+    @Body() data: z.infer<typeof updateProductZod>,
+    @Param() params: any,
+  ) {
+    return this.adminService.updateProduct(data, params.id);
   }
 }

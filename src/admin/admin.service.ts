@@ -4,6 +4,7 @@ import {
   createCategoryZod,
   createProductZod,
   updateCategoryZod,
+  updateProductZod,
 } from './admin.zod';
 import { Categorys, Products } from '@prisma/client';
 import { z } from 'zod';
@@ -199,6 +200,12 @@ export class AdminService {
     }
 
     try {
+      await this.prisma.products.deleteMany({
+        where: {
+          categoryId: categoryId,
+        },
+      });
+
       await this.prisma.categorys.delete({
         where: {
           id: categoryId,
@@ -220,7 +227,13 @@ export class AdminService {
     }
   };
 
-  createProduct = async (data: z.infer<typeof createProductZod>) => {
+  createProduct = async (
+    data: z.infer<typeof createProductZod>,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: Products;
+  }> => {
     const validateData = createProductZod.safeParse({
       name: data.name,
       description: data.description,
@@ -291,6 +304,134 @@ export class AdminService {
         state: 'success',
         message: 'Product has been added.',
         data: product,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  updateProduct = async (
+    data: z.infer<typeof updateProductZod>,
+    productId: string,
+  ) => {
+    const validateData = updateProductZod.safeParse({
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      categoryId: data.categoryId,
+      stock: data.stock,
+    });
+
+    if (!validateData.success) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Failed in type validation.',
+          errors: validateData.error.errors[0].message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const product: Products | null = await this.prisma.products.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Product not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const category: Categorys | null = await this.prisma.categorys.findUnique({
+      where: {
+        id: validateData.data.categoryId,
+      },
+    });
+
+    if (!category) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Category not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (
+      product.name === validateData.data.name &&
+      product.description === validateData.data.description &&
+      product.price === validateData.data.price &&
+      product.categoryId === validateData.data.categoryId &&
+      product.stock === validateData.data.stock
+    ) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'No changes detected.',
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    try {
+      const updateProduct: Products = await this.prisma.products.update({
+        where: {
+          id: productId,
+        },
+        data: {
+          name: validateData.data.name,
+          description: validateData.data.description,
+          price: validateData.data.price,
+          categoryId: validateData.data.categoryId,
+          stock: validateData.data.stock,
+        },
+      });
+
+      if (updateProduct.categoryId !== product.categoryId) {
+        const previousCategory: Categorys | null =
+          await this.prisma.categorys.findUnique({
+            where: {
+              id: product.categoryId,
+            },
+          });
+
+        await this.prisma.categorys.update({
+          where: {
+            id: previousCategory?.id,
+          },
+          data: {
+            totalProducts: category.totalProducts - 1,
+          },
+        });
+
+        await this.prisma.categorys.update({
+          where: {
+            id: updateProduct.categoryId,
+          },
+          data: {
+            totalProducts: category.totalProducts + 1,
+          },
+        });
+      }
+
+      return {
+        state: 'success',
+        message: 'Product has been updated.',
+        data: updateProduct,
       };
     } catch (error) {
       throw new HttpException(

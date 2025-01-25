@@ -49,7 +49,7 @@ const createProductZod = z.object({
     .min(1, { message: 'At least one file is required.' })
     .max(4, { message: 'A maximum of 4 files is allowed.' }),
   categoryId: z.string({ message: 'Category is required.' }),
-  stock: z.number().optional(),
+  stock: z.string().optional(),
 });
 
 const updateProductZod = z.object({
@@ -60,10 +60,10 @@ const updateProductZod = z.object({
     .string({ message: 'Description  can not be empty.' })
     .min(1, 'Description can not be empty.'),
   price: z
-    .number({ message: 'Price is required.' })
+    .string({ message: 'Price is required.' })
     .min(1, 'Price can not be empty.'),
   categoryId: z.string({ message: 'Category is required.' }),
-  stock: z.number({ message: 'Stock is required.' }),
+  stock: z.string({ message: 'Stock is required.' }),
 });
 
 const editOrderZod = z.object({

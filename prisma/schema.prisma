@@ -32,7 +32,7 @@ model Products {
     description   String
     price         String
     categoryId    String
-    stock         Int          @default(0)
+    stock         String       @default("0")
     imagesUrl     String[]
     averageRating Float?
     createdAt     DateTime     @default(now())
