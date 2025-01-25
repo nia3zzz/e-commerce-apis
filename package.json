@@ -28,6 +28,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.2",
+    "nestjs-form-data": "^1.9.92",
     "prisma": "^6.2.1",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",

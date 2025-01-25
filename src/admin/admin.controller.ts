@@ -9,8 +9,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { createCategoryZod, updateCategoryZod } from './admin.zod';
+import {
+  createCategoryZod,
+  updateCategoryZod,
+  createProductZod,
+} from './admin.zod';
 import { AdminAuthGuard } from './admin.guard';
+import { FormDataRequest, FileSystemStoredFile } from 'nestjs-form-data';
+import { z } from 'zod';
 
 @Controller({ host: 'admin.localhost' })
 export class AdminController {
@@ -38,5 +44,12 @@ export class AdminController {
   @Delete('/category/:id')
   deleteCategory(@Param() params: any) {
     return this.adminService.deleteCategory(params.id);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Post('/product')
+  @FormDataRequest({ storage: FileSystemStoredFile })
+  async createProduct(@Body() data: z.infer<typeof createProductZod>) {
+    return this.adminService.createProduct(data);
   }
 }

@@ -1,7 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { createCategoryZod, updateCategoryZod } from './admin.zod';
-import { Categorys } from '@prisma/client';
+import {
+  createCategoryZod,
+  createProductZod,
+  updateCategoryZod,
+} from './admin.zod';
+import { Categorys, Products } from '@prisma/client';
+import { z } from 'zod';
+import cloudinary from 'src/cloudinary/cloudinary';
+import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class AdminService {
@@ -201,6 +208,89 @@ export class AdminService {
       return {
         state: 'success',
         message: 'Category has been deleted.',
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  createProduct = async (data: z.infer<typeof createProductZod>) => {
+    const validateData = createProductZod.safeParse({
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      files: Array.isArray(data.files) ? data.files : [data.files],
+      categoryId: data.categoryId,
+      stock: data.stock,
+    });
+
+    if (!validateData.success) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Failed in type validation.',
+          errors: validateData.error.errors[0].message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const category: Categorys | null = await this.prisma.categorys.findUnique({
+      where: {
+        id: validateData.data.categoryId,
+      },
+    });
+
+    if (!category) {
+      throw new HttpException(
+        {
+          state: 'error  ',
+          message: 'Category not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    try {
+      const imageUrls: string[] = await Promise.all(
+        validateData.data.files.map(async (file) => {
+          const imageUrl = await cloudinary.uploader.upload(file.path, {
+            folder: 'products',
+          });
+          return imageUrl.secure_url;
+        }),
+      );
+
+      const product: Products | null = await this.prisma.products.create({
+        data: {
+          name: validateData.data.name,
+          description: validateData.data.description,
+          price: validateData.data.price,
+          imagesUrl: imageUrls,
+          categoryId: validateData.data.categoryId,
+          stock: validateData.data.stock,
+        },
+      });
+
+      await this.prisma.categorys.update({
+        where: {
+          id: validateData.data.categoryId,
+        },
+        data: {
+          totalProducts: category.totalProducts + 1,
+        },
+      });
+
+      return {
+        state: 'success',
+        message: 'Product has been added.',
+        data: product,
       };
     } catch (error) {
       throw new HttpException(
