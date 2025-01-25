@@ -9,7 +9,6 @@ import {
 import { Categorys, Products } from '@prisma/client';
 import { z } from 'zod';
 import cloudinary from 'src/cloudinary/cloudinary';
-import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class AdminService {
@@ -319,7 +318,11 @@ export class AdminService {
   updateProduct = async (
     data: z.infer<typeof updateProductZod>,
     productId: string,
-  ) => {
+  ): Promise<{
+    state: string;
+    message: string;
+    data: Products;
+  }> => {
     const validateData = updateProductZod.safeParse({
       name: data.name,
       description: data.description,
@@ -434,6 +437,69 @@ export class AdminService {
         data: updateProduct,
       };
     } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  deleteProduct = async (
+    productId: string,
+  ): Promise<{
+    state: string;
+    message: string;
+  }> => {
+    const product: Products | null = await this.prisma.products.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Product not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    try {
+      const category: Categorys | null = await this.prisma.categorys.findUnique(
+        {
+          where: {
+            id: product.categoryId,
+          },
+        },
+      );
+
+      if (category) {
+        await this.prisma.categorys.update({
+          where: {
+            id: category?.id,
+          },
+          data: {
+            totalProducts: category.totalProducts - 1,
+          },
+        });
+      }
+
+      await this.prisma.products.delete({
+        where: {
+          id: productId,
+        },
+      });
+
+      return {
+        state: 'success',
+        message: 'Product has been deleted.',
+      };
+    } catch {
       throw new HttpException(
         {
           state: 'error',

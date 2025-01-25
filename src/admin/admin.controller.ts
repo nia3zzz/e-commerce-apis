@@ -56,10 +56,16 @@ export class AdminController {
 
   @UseGuards(AdminAuthGuard)
   @Put('/product/:id')
-  deleteProduct(
+  updateProduct(
     @Body() data: z.infer<typeof updateProductZod>,
     @Param() params: any,
   ) {
     return this.adminService.updateProduct(data, params.id);
+  }
+
+@UseGuards(AdminAuthGuard)
+  @Delete('/product/:id')
+  deleteProduct(@Param() params: any) {
+    return this.adminService.deleteProduct(params.id);
   }
 }
