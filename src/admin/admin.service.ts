@@ -329,6 +329,7 @@ export class AdminService {
       name: data.name,
       description: data.description,
       price: data.price,
+      files: Array.isArray(data.files) ? data.files : [data.files],
       categoryId: data.categoryId,
       stock: data.stock,
     });
@@ -379,9 +380,9 @@ export class AdminService {
     if (
       product.name === validateData.data.name &&
       product.description === validateData.data.description &&
-      product.price === validateData.data.price &&
+      product.price === Number(validateData.data.price) &&
       product.categoryId === validateData.data.categoryId &&
-      product.stock === validateData.data.stock
+      product.stock === Number(validateData.data.stock)
     ) {
       throw new HttpException(
         {
@@ -393,6 +394,66 @@ export class AdminService {
     }
 
     try {
+      if (validateData.data.files && validateData.data.files.length > 0) {
+        const imageUrls: string[] = await Promise.all(
+          validateData.data.files.map(async (file) => {
+            const imageUrl = await cloudinary.uploader.upload(file.path, {
+              folder: 'products',
+            });
+            return imageUrl.secure_url;
+          }),
+        );
+
+        const updateProduct: Products = await this.prisma.products.update({
+          where: {
+            id: productId,
+          },
+          data: {
+            name: validateData.data.name,
+            description: validateData.data.description,
+            price: Number(validateData.data.price),
+            imagesUrl: imageUrls,
+            categoryId: validateData.data.categoryId,
+            stock: Number(validateData.data.stock),
+          },
+        });
+
+        if (updateProduct.categoryId !== product.categoryId) {
+          const previousCategory: Categorys | null =
+            await this.prisma.categorys.findUnique({
+              where: {
+                id: product.categoryId,
+              },
+            });
+
+          if (previousCategory) {
+            await this.prisma.categorys.update({
+              where: {
+                id: previousCategory?.id,
+              },
+              data: {
+                totalProducts: previousCategory.totalProducts - 1,
+              },
+            });
+          }
+
+          await this.prisma.categorys.update({
+            where: {
+              id: updateProduct.categoryId,
+            },
+            data: {
+              totalProducts: category.totalProducts + 1,
+            },
+          });
+        }
+
+        return {
+          state: 'success',
+          message: 'Product has been updated.',
+          data: updateProduct,
+        };
+      }
+
       const updateProduct: Products = await this.prisma.products.update({
         where: {
           id: productId,
@@ -400,9 +461,9 @@ export class AdminService {
         data: {
           name: validateData.data.name,
           description: validateData.data.description,
-          price: validateData.data.price,
+          price: Number(validateData.data.price),
           categoryId: validateData.data.categoryId,
-          stock: validateData.data.stock,
+          stock: Number(validateData.data.stock),
         },
       });
 

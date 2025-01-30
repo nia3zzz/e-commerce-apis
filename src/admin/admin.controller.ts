@@ -19,7 +19,6 @@ import {
 import { AdminAuthGuard } from './admin.guard';
 import { FormDataRequest, FileSystemStoredFile } from 'nestjs-form-data';
 import { z } from 'zod';
-import { param } from 'express-validator';
 
 @Controller({ host: 'admin.localhost' })
 export class AdminController {
@@ -58,6 +57,7 @@ export class AdminController {
 
   @UseGuards(AdminAuthGuard)
   @Put('/product/:id')
+  @FormDataRequest({ storage: FileSystemStoredFile })
   updateProduct(
     @Body() data: z.infer<typeof updateProductZod>,
     @Param() params: any,
