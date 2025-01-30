@@ -30,9 +30,9 @@ model Products {
     id            String       @id @default(uuid())
     name          String
     description   String
-    price         String
+    price         Int
     categoryId    String
-    stock         String       @default("0")
+    stock         Int       @default(0)
     imagesUrl     String[]
     averageRating Float?
     createdAt     DateTime     @default(now())
@@ -71,7 +71,7 @@ model Orders {
     id                String        @id @default(uuid())
     userId            String
     orderDate         DateTime      @default(now())
-    totalAmount       Float
+    totalAmount       Int
     status            OrderStatus   @default(PENDING)
     shippingAddressId String
     paymentMethod     PaymentMethod
@@ -87,7 +87,7 @@ model OrderItems {
     orderId   String
     productId String
     quantity  Int
-    price     Float
+    price     Int
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     order     Orders   @relation(fields: [orderId], references: [id])
@@ -120,7 +120,7 @@ model CartItems {
     cartId    String
     productId String
     quantity  Int
-    price     Float
+    price     Int
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     cart      Carts    @relation(fields: [cartId], references: [id])

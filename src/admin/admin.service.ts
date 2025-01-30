@@ -65,6 +65,8 @@ export class AdminService {
         data: category,
       };
     } catch (error) {
+      console.log(error);
+
       throw new HttpException(
         {
           state: 'error',
@@ -85,7 +87,7 @@ export class AdminService {
 
       return {
         state: 'success',
-        message: 'Data has been found.',
+        message: `${categories.length} categories found.`,
         data: categories,
       };
     } catch (error) {
@@ -283,10 +285,10 @@ export class AdminService {
         data: {
           name: validateData.data.name,
           description: validateData.data.description,
-          price: validateData.data.price,
+          price: Number(validateData.data.price),
           imagesUrl: imageUrls,
           categoryId: validateData.data.categoryId,
-          stock: validateData.data.stock,
+          stock: Number(validateData.data.stock),
         },
       });
 
@@ -412,14 +414,16 @@ export class AdminService {
             },
           });
 
-        await this.prisma.categorys.update({
-          where: {
-            id: previousCategory?.id,
-          },
-          data: {
-            totalProducts: category.totalProducts - 1,
-          },
-        });
+        if (previousCategory) {
+          await this.prisma.categorys.update({
+            where: {
+              id: previousCategory?.id,
+            },
+            data: {
+              totalProducts: previousCategory.totalProducts - 1,
+            },
+          });
+        }
 
         await this.prisma.categorys.update({
           where: {
@@ -500,6 +504,100 @@ export class AdminService {
         message: 'Product has been deleted.',
       };
     } catch {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  getProducts = async (params: {
+    category: string | null;
+    priceMin: number;
+    priceMax: number;
+    offset: number;
+    limit: number;
+  }): Promise<{
+    state: string;
+    message: string;
+    data: Products[];
+  }> => {
+    const { category, priceMin, priceMax, offset, limit } = params;
+
+    if (priceMin < 0 || priceMax < 0) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Invalid query parameters.',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (priceMin > priceMax) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Invalid query parameters.',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if ((offset !== null && offset < 0) || (limit !== null && limit < 0)) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Invalid query parameters.',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (category) {
+      const categoryDocument: Categorys | null =
+        await this.prisma.categorys.findUnique({
+          where: {
+            id: category,
+          },
+        });
+
+      if (!categoryDocument) {
+        throw new HttpException(
+          {
+            state: 'error',
+            message: 'Category not found.',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+    }
+
+    try {
+      const products: Products[] | [] = await this.prisma.products.findMany({
+        where: {
+          categoryId: category ?? undefined,
+          price: {
+            gte: Number(priceMin),
+            lte: Number(priceMax),
+          },
+        },
+        skip: Number(offset),
+        take: Number(limit),
+        orderBy: { price: 'asc' },
+      });
+
+      return {
+        state: 'success',
+        message: `${products.length} products found.`,
+        data: products,
+      };
+    } catch (error) {
+      console.log(error);
+
       throw new HttpException(
         {
           state: 'error',

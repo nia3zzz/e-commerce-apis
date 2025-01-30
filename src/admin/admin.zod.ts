@@ -60,10 +60,10 @@ const updateProductZod = z.object({
     .string({ message: 'Description  can not be empty.' })
     .min(1, 'Description can not be empty.'),
   price: z
-    .string({ message: 'Price is required.' })
+    .number({ message: 'Price is required.' })
     .min(1, 'Price can not be empty.'),
   categoryId: z.string({ message: 'Category is required.' }),
-  stock: z.string({ message: 'Stock is required.' }),
+  stock: z.number({ message: 'Stock is required.' }),
 });
 
 const editOrderZod = z.object({

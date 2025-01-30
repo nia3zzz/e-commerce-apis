@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
@@ -63,9 +64,28 @@ export class AdminController {
     return this.adminService.updateProduct(data, params.id);
   }
 
-@UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @Delete('/product/:id')
   deleteProduct(@Param() params: any) {
     return this.adminService.deleteProduct(params.id);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Get('/product')
+  getProducts(
+    @Query('category') category: string | null = null,
+    @Query('price_min') priceMin: number = 0,
+    @Query('price_max')
+    priceMax: number = 2147483647,
+    @Query('offset') offset: number = 0,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.adminService.getProducts({
+      category,
+      priceMin,
+      priceMax,
+      offset,
+      limit,
+    });
   }
 }
