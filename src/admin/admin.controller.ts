@@ -19,6 +19,7 @@ import {
 import { AdminAuthGuard } from './admin.guard';
 import { FormDataRequest, FileSystemStoredFile } from 'nestjs-form-data';
 import { z } from 'zod';
+import { param } from 'express-validator';
 
 @Controller({ host: 'admin.localhost' })
 export class AdminController {
@@ -71,7 +72,7 @@ export class AdminController {
   }
 
   @UseGuards(AdminAuthGuard)
-  @Get('/product')
+  @Get('/products')
   getProducts(
     @Query('category') category: string | null = null,
     @Query('price_min') priceMin: number = 0,
@@ -87,5 +88,11 @@ export class AdminController {
       offset,
       limit,
     });
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Get('/product/:id')
+  getProduct(@Param() params: any) {
+    return this.adminService.getProduct(params.id);
   }
 }

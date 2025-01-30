@@ -607,4 +607,34 @@ export class AdminService {
       );
     }
   };
+
+  getProduct = async (
+    productId: string,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: Products;
+  }> => {
+    const product: Products | null = await this.prisma.products.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Product not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return {
+      state: 'success',
+      message: 'Product found.',
+      data: product,
+    };
+  };
 }
