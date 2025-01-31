@@ -4,9 +4,10 @@ import {
   createCategoryZod,
   createProductZod,
   updateCategoryZod,
+  updateOrderZod,
   updateProductZod,
 } from './admin.zod';
-import { Categorys, Products } from '@prisma/client';
+import { Categorys, Orders, Products } from '@prisma/client';
 import { z } from 'zod';
 import cloudinary from 'src/cloudinary/cloudinary';
 
@@ -697,5 +698,138 @@ export class AdminService {
       message: 'Product found.',
       data: product,
     };
+  };
+
+  getOrders = async (params: {
+    sortByDate: boolean;
+    offset: number;
+    limit: number;
+  }): Promise<{
+    state: string;
+    message: string;
+    data: Orders[];
+  }> => {
+    const { sortByDate, offset, limit } = params;
+
+    if (Boolean(sortByDate) !== true || false) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Inavlid query parameters.',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (Number(offset) <= 0 && Number(limit) <= 0) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Inavlid query parameters.',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const orders: Orders[] | [] = await this.prisma.orders.findMany({
+        skip: Number(offset),
+        take: Number(limit),
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+
+      return {
+        state: 'success',
+        message: `${orders.length} orders found.`,
+        data: orders,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  getOrder = async (orderId: string) => {
+    const category: Categorys | null = await this.prisma.categorys.findUnique({
+      where: {
+        id: orderId,
+      },
+    });
+
+    if (!category) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Category not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return category;
+  };
+
+  updateOrder = async (data: typeof updateOrderZod, orderId: string) => {
+    const validateData = updateOrderZod.safeParse(data);
+
+    if (!validateData.success) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Failed in type validation.',
+          errors: validateData.error.errors[0].message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const order: Orders | null = await this.prisma.orders.findUnique({
+      where: {
+        id: orderId,
+      },
+    });
+
+    if (!order) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Category not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    try {
+      const updatedOrderDocument: Orders | null =
+        await this.prisma.orders.update({
+          where: {
+            id: orderId,
+          },
+          data: {
+            status: validateData.data.status,
+          },
+        });
+
+      return {
+        state: 'success',
+        message: 'Order updated.',
+        data: updatedOrderDocument,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Internal server error.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   };
 }

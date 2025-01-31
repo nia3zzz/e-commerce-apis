@@ -86,7 +86,7 @@ const updateProductZod = z.object({
   stock: z.string({ message: 'Stock is required.' }),
 });
 
-const editOrderZod = z.object({
+const updateOrderZod = z.object({
   status: z.enum(['PENDING', 'COMPLETED'], {
     required_error: 'Status is required.',
   }),
@@ -96,6 +96,6 @@ export {
   createProductZod,
   createCategoryZod,
   updateCategoryZod,
-  editOrderZod,
+  updateOrderZod,
   updateProductZod,
 };

@@ -95,4 +95,20 @@ export class AdminController {
   getProduct(@Param() params: any) {
     return this.adminService.getProduct(params.id);
   }
+
+  @UseGuards(AdminAuthGuard)
+  @Get('/orders')
+  getOrders(
+    @Query('sortByDate') sortByDate: boolean = false,
+    @Query('offset') offset: number = 0,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.adminService.getOrders({ sortByDate, offset, limit });
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Get('/order/:id')
+  getOrder(@Param() params: any) {
+    return this.adminService.getOrder(params.id);
+  }
 }
