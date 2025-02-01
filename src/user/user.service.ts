@@ -1,8 +1,9 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Users } from '@prisma/client';
+import { Sessions, Users } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { createUserZod, loginUserZod } from './user.zod';
 import { AuthService } from 'src/auth/auth.service';
+import { decode } from 'jsonwebtoken';
 
 @Injectable()
 export class UserService {
@@ -151,6 +152,36 @@ export class UserService {
       const token: Promise<string> = this.authService.generateToken(user.id);
 
       return token;
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  logout = async (token: string): Promise<boolean> => {
+    const decoded: any = decode(token);
+
+    const userId: string = decoded.id;
+
+    const foundSession: Sessions | null = await this.prisma.sessions.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    try {
+      await this.prisma.sessions.delete({
+        where: {
+          id: foundSession?.id,
+        },
+      });
+
+      return true;
     } catch (error) {
       throw new HttpException(
         {

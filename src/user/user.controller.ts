@@ -1,7 +1,16 @@
-import { Body, Controller, HttpCode, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { createUserZod, loginUserZod } from './user.zod';
-import { Response } from 'express';
+import { Request, Response } from 'express';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('/user')
 export class UserController {
@@ -15,7 +24,6 @@ export class UserController {
   @Post('/login')
   @HttpCode(200)
   async login(@Body() data: typeof loginUserZod, @Res() res: Response) {
-
     const token = await this.userService.login(data);
 
     res.cookie('token', token, {
@@ -28,5 +36,19 @@ export class UserController {
       state: 'success',
       message: 'Login successful.',
     });
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/logout')
+  async logout(@Req() req: Request, @Res() res: Response) {
+    const result = await this.userService.logout(req.cookies.token as string);
+
+    if (result) {
+      res.clearCookie('token');
+      return res.json({
+        state: 'success',
+        message: 'Logout successful.',
+      });
+    }
   }
 }
