@@ -1,9 +1,16 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Sessions, Users } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { createUserZod, loginUserZod } from './user.zod';
+import {
+  createUserZod,
+  loginUserZod,
+  updateProfilePictureZod,
+} from './user.zod';
 import { AuthService } from 'src/auth/auth.service';
 import { decode } from 'jsonwebtoken';
+import cloudinary from 'src/cloudinary/cloudinary';
+import { UploadApiResponse } from 'cloudinary';
+import { string } from 'zod';
 
 @Injectable()
 export class UserService {
@@ -182,6 +189,119 @@ export class UserService {
       });
 
       return true;
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  updateProfilePicture = async (
+    data: typeof updateProfilePictureZod,
+    token: string,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: Users;
+  }> => {
+    const validateData = updateProfilePictureZod.safeParse(data);
+
+    if (!validateData.success) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Failed in type validation.',
+          errors: validateData.error.errors[0].message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const decoded: any = decode(token);
+
+      const userId: string = decoded.id;
+
+      const profileSecureUrl: UploadApiResponse =
+        await cloudinary.uploader.upload(validateData.data.file.path, {
+          folder: 'products',
+        });
+
+      const userUpdatedDocument: Users = await this.prisma.users.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          profileImageUrl: profileSecureUrl.secure_url,
+        },
+      });
+
+      return {
+        state: 'success',
+        message: 'Profile picture has been updated.',
+        data: userUpdatedDocument,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  removeProfilePicture = async (
+    token: string,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: Users;
+  }> => {
+    const decoded: any = decode(token);
+
+    const userId: string = decoded.id;
+
+    const foundUser: Users | null = await this.prisma.users.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (
+      foundUser?.profileImageUrl ===
+      'https://i.pinimg.com/280x280_RS/e1/08/21/e10821c74b533d465ba888ea66daa30f.jpg'
+    ) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'No profile picture to remove.',
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    try {
+      const updateUserDocument = await this.prisma.users.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          profileImageUrl:
+            'https://i.pinimg.com/280x280_RS/e1/08/21/e10821c74b533d465ba888ea66daa30f.jpg',
+        },
+      });
+
+      return {
+        state: 'success',
+        message: 'Profile picture has been removed.',
+        data: updateUserDocument,
+      };
     } catch (error) {
       throw new HttpException(
         {

@@ -32,4 +32,25 @@ const loginUserZod = z
     message: 'User name or email is required.',
   });
 
-export { createUserZod, loginUserZod };
+const updateProfilePictureZod = z.object({
+  file: z.object(
+    {
+      originalName: z.string({ message: 'File name is required.' }),
+      encoding: z.string({ message: 'Encoding is required.' }),
+      busBoyMimeType: z.string({ message: 'MIME type is required.' }),
+      path: z.string({ message: 'File path is required.' }),
+      size: z.number().max(5 * 1024 * 1024, {
+        message: 'File size must not exceed 5 MB.',
+      }),
+      fileType: z.object({
+        ext: z.string({ message: 'File extension is required.' }),
+        mime: z.string({ message: 'MIME type is required.' }),
+      }),
+    },
+    {
+      message: 'Image is required.',
+    },
+  ),
+});
+
+export { createUserZod, loginUserZod, updateProfilePictureZod };

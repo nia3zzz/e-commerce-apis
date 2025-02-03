@@ -10,6 +10,7 @@ import {
 import { Categorys, Orders, Products } from '@prisma/client';
 import { z } from 'zod';
 import cloudinary from 'src/cloudinary/cloudinary';
+import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class AdminService {
@@ -66,8 +67,6 @@ export class AdminService {
         data: category,
       };
     } catch (error) {
-      console.log(error);
-
       throw new HttpException(
         {
           state: 'error',
@@ -398,9 +397,10 @@ export class AdminService {
       if (validateData.data.files && validateData.data.files.length > 0) {
         const imageUrls: string[] = await Promise.all(
           validateData.data.files.map(async (file) => {
-            const imageUrl = await cloudinary.uploader.upload(file.path, {
-              folder: 'products',
-            });
+            const imageUrl: UploadApiResponse =
+              await cloudinary.uploader.upload(file.path, {
+                folder: 'products',
+              });
             return imageUrl.secure_url;
           }),
         );
@@ -658,8 +658,6 @@ export class AdminService {
         data: products,
       };
     } catch (error) {
-      console.log(error);
-
       throw new HttpException(
         {
           state: 'error',

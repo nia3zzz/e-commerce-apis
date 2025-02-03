@@ -1,16 +1,23 @@
 import {
   Body,
   Controller,
+  Delete,
   HttpCode,
   Post,
+  Put,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { createUserZod, loginUserZod } from './user.zod';
+import {
+  createUserZod,
+  loginUserZod,
+  updateProfilePictureZod,
+} from './user.zod';
 import { Request, Response } from 'express';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { FileSystemStoredFile, FormDataRequest } from 'nestjs-form-data';
 
 @Controller('/user')
 export class UserController {
@@ -50,5 +57,24 @@ export class UserController {
         message: 'Logout successful.',
       });
     }
+  }
+
+  @UseGuards(AuthGuard)
+  @Put('/profilepicture')
+  @FormDataRequest({ storage: FileSystemStoredFile })
+  updateProfilePicture(
+    @Req() req: Request,
+    @Body() data: typeof updateProfilePictureZod,
+  ) {
+    return this.userService.updateProfilePicture(
+      data,
+      req.cookies.token as string,
+    );
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('/profilepicture')
+  async deleteProfilePicture(@Req() req: Request) {
+    return this.userService.removeProfilePicture(req.cookies.token as string);
   }
 }
