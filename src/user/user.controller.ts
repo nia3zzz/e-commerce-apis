@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   Post,
   Put,
@@ -76,5 +77,11 @@ export class UserController {
   @Delete('/profilepicture')
   async deleteProfilePicture(@Req() req: Request) {
     return this.userService.removeProfilePicture(req.cookies.token as string);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('/profile')
+  getProfile(@Req() req: Request) {
+    return this.userService.getProfile(req.cookies.token as string);
   }
 }

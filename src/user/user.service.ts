@@ -1,5 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Sessions, Users } from '@prisma/client';
+import {
+  CartItems,
+  Carts,
+  OrderItems,
+  Orders,
+  Products,
+  Sessions,
+  Users,
+} from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   createUserZod,
@@ -10,7 +18,18 @@ import { AuthService } from 'src/auth/auth.service';
 import { decode } from 'jsonwebtoken';
 import cloudinary from 'src/cloudinary/cloudinary';
 import { UploadApiResponse } from 'cloudinary';
-import { string } from 'zod';
+import { promise } from 'zod';
+
+export interface IProfileData {
+  firstName: string;
+  lastName: string;
+  userName: string;
+  profileImageUrl: string;
+  numberOfProductsInCarts: number;
+  productsInCarts: CartItems[];
+  numberOfProductsPendingOrder: number;
+  productsPendingOrder: OrderItems[];
+}
 
 @Injectable()
 export class UserService {
@@ -301,6 +320,83 @@ export class UserService {
         state: 'success',
         message: 'Profile picture has been removed.',
         data: updateUserDocument,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  getProfile = async (
+    token: string,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: IProfileData;
+  }> => {
+    const decoded: any = decode(token);
+
+    const userId: string = decoded.id;
+
+    try {
+      const foundUser: Users | null = await this.prisma.users.findUnique({
+        where: {
+          id: userId,
+        },
+      });
+
+      const cart: Carts | null = await this.prisma.carts.findFirst({
+        where: {
+          userId: foundUser?.id,
+        },
+      });
+
+      const cartItems: CartItems[] | [] = await this.prisma.cartItems.findMany({
+        where: {
+          cartId: cart?.id,
+        },
+      });
+
+      const orders: Orders[] | [] = await this.prisma.orders.findMany({
+        where: {
+          userId: userId,
+          status: 'PENDING',
+        },
+      });
+
+      const orderItems: OrderItems[] | [] = await Promise.all(
+        orders.map(async (order) => {
+          const orderItem: OrderItems | null =
+            await this.prisma.orderItems.findFirst({
+              where: {
+                orderId: order.id,
+              },
+            });
+          return orderItem;
+        }),
+      ).then(
+        (orderItems) =>
+          orderItems.filter((item) => item !== null) as OrderItems[],
+      );
+
+      return {
+        state: 'success',
+        message: 'Profile data has been fetched.',
+        data: {
+          firstName: foundUser?.firstName ?? '',
+          lastName: foundUser?.lastName ?? '',
+          userName: foundUser?.userName ?? '',
+          profileImageUrl: foundUser?.profileImageUrl ?? '',
+          numberOfProductsInCarts: cartItems.length,
+          productsInCarts: cartItems,
+          numberOfProductsPendingOrder: orderItems.length,
+          productsPendingOrder: orderItems,
+        },
       };
     } catch (error) {
       throw new HttpException(
