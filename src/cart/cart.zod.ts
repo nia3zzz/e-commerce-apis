@@ -9,4 +9,19 @@ const addProductToCartZod = z.object({
     .positive({ message: 'Quantity must be greater than 0.' }),
 });
 
-export { addProductToCartZod };
+const updateCartItemsZod = z.object({
+  productInCartId: z
+    .string({ message: 'Product id is required.' })
+    .min(36, 'Invalid product id.'),
+  quantity: z
+    .number({ message: 'Quantity is required.' })
+    .positive({ message: 'Quantity must be greater than 0.' }),
+});
+
+const removeCartItemZod = z.object({
+  productInCartId: z
+    .string({ message: 'Product id is required.' })
+    .min(36, 'Invalid product id.'),
+});
+
+export { addProductToCartZod, updateCartItemsZod, removeCartItemZod };
