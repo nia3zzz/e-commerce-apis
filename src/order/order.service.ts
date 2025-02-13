@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { placeOrderZod } from './order.zod';
+import { cancelOrderZod, placeOrderZod } from './order.zod';
 import { decode } from 'jsonwebtoken';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Address, OrderItems, Orders, Products } from '@prisma/client';
@@ -135,6 +135,106 @@ export class OrderService {
           paymentMethod: validateData.data.paymentMethod,
           price: price,
         },
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Something went wrong.',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  };
+
+  cancelOrder = async (
+    data: typeof cancelOrderZod,
+    token: string,
+  ): Promise<{
+    state: string;
+    message: string;
+  }> => {
+    const decoded: any = decode(token);
+    const userId: string = decoded.id;
+
+    const validateData = cancelOrderZod.safeParse(data);
+
+    if (!validateData.success) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Failed in type validation.',
+          errors: validateData.error.errors[0].message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const foundOrderItem: OrderItems | null =
+      await this.prisma.orderItems.findUnique({
+        where: {
+          id: validateData.data.orderId,
+        },
+      });
+
+    if (!foundOrderItem) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Order not found.',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    //check if user is the owner of the order
+    const foundOrder: Orders | null = await this.prisma.orders.findUnique({
+      where: {
+        id: foundOrderItem.orderId,
+      },
+    });
+
+    if (foundOrder?.userId !== userId) {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Unauthorized.',
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    if (foundOrderItem.status !== 'PENDING') {
+      throw new HttpException(
+        {
+          state: 'error',
+          message: 'Cancel the order at your delivery location.',
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    try {
+      await this.prisma.orderItems.delete({
+        where: {
+          id: validateData.data.orderId,
+        },
+      });
+
+      await this.prisma.products.update({
+        where: {
+          id: foundOrderItem.productId,
+        },
+        data: {
+          stock: {
+            increment: foundOrderItem.quantity,
+          },
+        },
+      });
+
+      return {
+        state: 'success',
+        message: 'Order cancelled successfully.',
       };
     } catch (error) {
       throw new HttpException(

@@ -12,4 +12,10 @@ const placeOrderZod = z.object({
     .default('COD'),
 });
 
-export { placeOrderZod };
+const cancelOrderZod = z.object({
+  orderId : z
+    .string({ message: 'Order id is required.' })
+    .min(36, 'Invalid order id.'),
+});
+
+export { placeOrderZod, cancelOrderZod };
