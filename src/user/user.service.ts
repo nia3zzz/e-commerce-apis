@@ -365,7 +365,6 @@ export class UserService {
       const orders: Orders[] | [] = await this.prisma.orders.findMany({
         where: {
           userId: userId,
-          status: 'PENDING',
         },
       });
 
@@ -375,6 +374,7 @@ export class UserService {
             await this.prisma.orderItems.findFirst({
               where: {
                 orderId: order.id,
+                status: 'PENDING',
               },
             });
           return orderItem;

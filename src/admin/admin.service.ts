@@ -7,7 +7,7 @@ import {
   updateOrderZod,
   updateProductZod,
 } from './admin.zod';
-import { Categorys, Orders, Products } from '@prisma/client';
+import { Categorys, OrderItems, Orders, Products } from '@prisma/client';
 import { z } from 'zod';
 import cloudinary from 'src/cloudinary/cloudinary';
 import { UploadApiResponse } from 'cloudinary';
@@ -798,15 +798,15 @@ export class AdminService {
       throw new HttpException(
         {
           state: 'error',
-          message: 'Category not found.',
+          message: 'Order not found.',
         },
         HttpStatus.NOT_FOUND,
       );
     }
 
     try {
-      const updatedOrderDocument: Orders | null =
-        await this.prisma.orders.update({
+      const updatedOrderDocument: OrderItems | null =
+        await this.prisma.orderItems.update({
           where: {
             id: orderId,
           },

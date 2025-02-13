@@ -68,11 +68,6 @@ CREATE TABLE "Categorys" (
 CREATE TABLE "Orders" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "orderDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "totalAmount" INTEGER NOT NULL,
-    "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
-    "shippingAddressId" TEXT NOT NULL,
-    "paymentMethod" "PaymentMethod" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -85,6 +80,9 @@ CREATE TABLE "OrderItems" (
     "orderId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
+    "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
+    "shippingAddressId" TEXT NOT NULL,
+    "paymentMethod" "PaymentMethod" NOT NULL,
     "price" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -152,12 +150,6 @@ ALTER TABLE "Products" ADD CONSTRAINT "Products_categoryId_fkey" FOREIGN KEY ("c
 
 -- AddForeignKey
 ALTER TABLE "Address" ADD CONSTRAINT "Address_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Orders" ADD CONSTRAINT "Orders_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Orders" ADD CONSTRAINT "Orders_shippingAddressId_fkey" FOREIGN KEY ("shippingAddressId") REFERENCES "Address"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrderItems" ADD CONSTRAINT "OrderItems_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
