@@ -12,6 +12,17 @@ import { z } from 'zod';
 import cloudinary from 'src/cloudinary/cloudinary';
 import { UploadApiResponse } from 'cloudinary';
 
+//return type for create, update and get product routes
+export interface IProduct {
+  name: string;
+  description: string;
+  price: number;
+  categoryName: string;
+  stock: number;
+  imagesUrl: string[];
+  averageRating: number;
+}
+
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
@@ -233,7 +244,7 @@ export class AdminService {
   ): Promise<{
     state: string;
     message: string;
-    data: Products;
+    data: IProduct;
   }> => {
     const validateData = createProductZod.safeParse({
       name: data.name,
@@ -304,7 +315,15 @@ export class AdminService {
       return {
         state: 'success',
         message: 'Product has been added.',
-        data: product,
+        data: {
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          categoryName: category.name,
+          stock: product.stock,
+          imagesUrl: product.imagesUrl,
+          averageRating: product.averageRating ?? 0,
+        },
       };
     } catch (error) {
       throw new HttpException(
@@ -323,7 +342,7 @@ export class AdminService {
   ): Promise<{
     state: string;
     message: string;
-    data: Products;
+    data: IProduct;
   }> => {
     const validateData = updateProductZod.safeParse({
       name: data.name,
@@ -394,6 +413,8 @@ export class AdminService {
     }
 
     try {
+      //if theres any images
+
       if (validateData.data.files && validateData.data.files.length > 0) {
         const imageUrls: string[] = await Promise.all(
           validateData.data.files.map(async (file) => {
@@ -451,7 +472,15 @@ export class AdminService {
         return {
           state: 'success',
           message: 'Product has been updated.',
-          data: updateProduct,
+          data: {
+            name: updateProduct.name,
+            description: updateProduct.description,
+            price: updateProduct.price,
+            categoryName: category.name,
+            stock: updateProduct.stock,
+            imagesUrl: updateProduct.imagesUrl,
+            averageRating: updateProduct.averageRating ?? 0,
+          },
         };
       }
 
@@ -500,7 +529,15 @@ export class AdminService {
       return {
         state: 'success',
         message: 'Product has been updated.',
-        data: updateProduct,
+        data: {
+          name: updateProduct.name,
+          description: updateProduct.description,
+          price: updateProduct.price,
+          categoryName: category.name,
+          stock: updateProduct.stock,
+          imagesUrl: updateProduct.imagesUrl,
+          averageRating: updateProduct.averageRating ?? 0,
+        },
       };
     } catch (error) {
       throw new HttpException(
@@ -585,10 +622,11 @@ export class AdminService {
   }): Promise<{
     state: string;
     message: string;
-    data: Products[];
+    data: IProduct[];
   }> => {
     const { category, priceMin, priceMax, offset, limit } = params;
 
+    //querry validation
     if (priceMin < 0 || priceMax < 0) {
       throw new HttpException(
         {
@@ -655,7 +693,27 @@ export class AdminService {
       return {
         state: 'success',
         message: `${products.length} products found.`,
-        data: products,
+        data: await Promise.all(
+          products.map(async (product) => {
+            const productCategory: Categorys | null =
+              await this.prisma.categorys.findUnique({
+                where: {
+                  id: product.categoryId,
+                },
+              });
+
+            return {
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              categoryName: productCategory?.name ?? '',
+              stock: product.stock,
+              imagesUrl: product.imagesUrl,
+              averageRating: product.averageRating ?? 0,
+            };
+          }),
+        ),
       };
     } catch (error) {
       throw new HttpException(
