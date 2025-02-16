@@ -907,27 +907,90 @@ export class AdminService {
     }
   };
 
-  getOrder = async (orderId: string) => {
-    const category: Categorys | null = await this.prisma.categorys.findUnique({
-      where: {
-        id: orderId,
-      },
-    });
+  getOrder = async (
+    orderId: string,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: IOrder;
+  }> => {
+    const orderItem: OrderItems | null =
+      await this.prisma.orderItems.findUnique({
+        where: {
+          id: orderId,
+        },
+      });
 
-    if (!category) {
+    if (!orderItem) {
       throw new HttpException(
         {
           state: 'error',
-          message: 'Category not found.',
+          message: 'Order not found.',
         },
         HttpStatus.NOT_FOUND,
       );
     }
 
-    return category;
+    //the order entity of user
+    const order: Orders | null = await this.prisma.orders.findUnique({
+      where: {
+        id: orderItem.orderId,
+      },
+    });
+
+    const foundUser: Users | null = await this.prisma.users.findUnique({
+      where: {
+        id: order?.userId,
+      },
+    });
+
+    const foundAddress: Address | null = await this.prisma.address.findFirst({
+      where: {
+        id: orderItem.shippingAddressId,
+      },
+    });
+
+    const foundProduct: Products | null = await this.prisma.products.findUnique(
+      {
+        where: {
+          id: orderItem.productId,
+        },
+      },
+    );
+
+    return {
+      state: 'success',
+      message: 'Order found.',
+      data: {
+        id: orderItem.id,
+        orderdByName:
+          `${foundUser?.firstName ?? ''} ${foundUser?.lastName ?? ''}`.trim(),
+
+        productName: foundProduct?.name ?? '',
+        quantity: orderItem.quantity,
+        status: orderItem.status,
+        shippingAddress: {
+          street: foundAddress?.street ?? '',
+          city: foundAddress?.city ?? '',
+          state: foundAddress?.state ?? '',
+          postalCode: foundAddress?.postalCode ?? '0',
+          country: foundAddress?.country ?? '',
+          date: orderItem.createdAt,
+        },
+        paymentMethod: orderItem.paymentMethod,
+        price: orderItem.price,
+      },
+    };
   };
 
-  updateOrder = async (data: typeof updateOrderZod, orderId: string) => {
+  updateOrder = async (
+    data: typeof updateOrderZod,
+    orderId: string,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: IOrder;
+  }> => {
     const validateData = updateOrderZod.safeParse(data);
 
     if (!validateData.success) {
@@ -941,7 +1004,7 @@ export class AdminService {
       );
     }
 
-    const order: Orders | null = await this.prisma.orders.findUnique({
+    const order: OrderItems | null = await this.prisma.orderItems.findUnique({
       where: {
         id: orderId,
       },
@@ -968,10 +1031,53 @@ export class AdminService {
           },
         });
 
+      const foundOrder: Orders | null = await this.prisma.orders.findUnique({
+        where: {
+          id: order.orderId,
+        },
+      });
+
+      const foundUser = await this.prisma.users.findUnique({
+        where: {
+          id: foundOrder?.userId,
+        },
+      });
+
+      const foundAddress: Address | null = await this.prisma.address.findFirst({
+        where: {
+          userId: foundUser?.id,
+        },
+      });
+
+      const foundProduct: Products | null =
+        await this.prisma.products.findUnique({
+          where: {
+            id: order.productId,
+          },
+        });
+
       return {
         state: 'success',
         message: 'Order updated.',
-        data: updatedOrderDocument,
+        data: {
+          id: updatedOrderDocument.id,
+          orderdByName:
+            `${foundUser?.firstName ?? ''} ${foundUser?.lastName ?? ''}`.trim(),
+
+          productName: foundProduct?.name ?? '',
+          quantity: updatedOrderDocument.quantity,
+          status: updatedOrderDocument.status,
+          shippingAddress: {
+            street: foundAddress?.street ?? '',
+            city: foundAddress?.city ?? '',
+            state: foundAddress?.state ?? '',
+            postalCode: foundAddress?.postalCode ?? '0',
+            country: foundAddress?.country ?? '',
+            date: updatedOrderDocument.createdAt,
+          },
+          paymentMethod: updatedOrderDocument.paymentMethod,
+          price: updatedOrderDocument.price,
+        },
       };
     } catch (error) {
       throw new HttpException(
