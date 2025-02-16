@@ -7,13 +7,21 @@ import {
   updateOrderZod,
   updateProductZod,
 } from './admin.zod';
-import { Categorys, OrderItems, Orders, Products } from '@prisma/client';
+import {
+  Address,
+  Categorys,
+  OrderItems,
+  Orders,
+  Products,
+  Users,
+} from '@prisma/client';
 import { z } from 'zod';
 import cloudinary from 'src/cloudinary/cloudinary';
 import { UploadApiResponse } from 'cloudinary';
 
 //return type for create, update and get product routes
 export interface IProduct {
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -21,6 +29,24 @@ export interface IProduct {
   stock: number;
   imagesUrl: string[];
   averageRating: number;
+}
+
+export interface IOrder {
+  id: string;
+  orderdByName: string;
+  productName: string;
+  quantity: number;
+  status: 'PENDING' | 'COMPLETED';
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    date: Date;
+  };
+  paymentMethod: 'COD' | 'ONLINE';
+  price: number;
 }
 
 @Injectable()
@@ -316,6 +342,7 @@ export class AdminService {
         state: 'success',
         message: 'Product has been added.',
         data: {
+          id: product.id,
           name: product.name,
           description: product.description,
           price: product.price,
@@ -473,6 +500,7 @@ export class AdminService {
           state: 'success',
           message: 'Product has been updated.',
           data: {
+            id: updateProduct.id,
             name: updateProduct.name,
             description: updateProduct.description,
             price: updateProduct.price,
@@ -530,6 +558,7 @@ export class AdminService {
         state: 'success',
         message: 'Product has been updated.',
         data: {
+          id: updateProduct.id,
           name: updateProduct.name,
           description: updateProduct.description,
           price: updateProduct.price,
@@ -731,7 +760,7 @@ export class AdminService {
   ): Promise<{
     state: string;
     message: string;
-    data: Products;
+    data: IProduct;
   }> => {
     const product: Products | null = await this.prisma.products.findUnique({
       where: {
@@ -749,10 +778,26 @@ export class AdminService {
       );
     }
 
+    const productCategory: Categorys | null =
+      await this.prisma.categorys.findUnique({
+        where: {
+          id: product.categoryId,
+        },
+      });
+
     return {
       state: 'success',
       message: 'Product found.',
-      data: product,
+      data: {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        categoryName: productCategory?.name ?? '',
+        stock: product.stock,
+        imagesUrl: product.imagesUrl,
+        averageRating: product.averageRating ?? 0,
+      },
     };
   };
 
@@ -763,10 +808,11 @@ export class AdminService {
   }): Promise<{
     state: string;
     message: string;
-    data: Orders[];
+    data: IOrder[];
   }> => {
     const { sortByDate, offset, limit } = params;
 
+    //querry validation
     if (Boolean(sortByDate) !== true || false) {
       throw new HttpException(
         {
@@ -788,18 +834,67 @@ export class AdminService {
     }
 
     try {
-      const orders: Orders[] | [] = await this.prisma.orders.findMany({
-        skip: Number(offset),
-        take: Number(limit),
-        orderBy: {
-          createdAt: 'asc',
-        },
-      });
+      const orderItems: OrderItems[] | [] =
+        await this.prisma.orderItems.findMany({
+          skip: Number(offset),
+          take: Number(limit),
+          orderBy: {
+            createdAt: 'asc',
+          },
+        });
 
       return {
         state: 'success',
-        message: `${orders.length} orders found.`,
-        data: orders,
+        message: `${orderItems.length} orders found.`,
+        data: await Promise.all(
+          orderItems.map(async (order) => {
+            const foundOrder: Orders | null =
+              await this.prisma.orders.findUnique({
+                where: {
+                  id: order.orderId,
+                },
+              });
+
+            const foundUser: Users | null = await this.prisma.users.findUnique({
+              where: {
+                id: foundOrder?.userId,
+              },
+            });
+
+            const foundProduct: Products | null =
+              await this.prisma.products.findUnique({
+                where: {
+                  id: order.productId,
+                },
+              });
+
+            const foundAddress: Address | null =
+              await this.prisma.address.findFirst({
+                where: {
+                  userId: foundUser?.id,
+                },
+              });
+
+            return {
+              id: order.id,
+              orderdByName:
+                `${foundUser?.firstName ?? ''} ${foundUser?.lastName ?? ''}`.trim(),
+              productName: foundProduct?.name ?? '',
+              quantity: order.quantity,
+              status: order.status,
+              shippingAddress: {
+                street: foundAddress?.street ?? '',
+                city: foundAddress?.city ?? '',
+                state: foundAddress?.state ?? '',
+                postalCode: foundAddress?.postalCode ?? '0',
+                country: foundAddress?.country ?? '',
+                date: order.createdAt,
+              },
+              paymentMethod: order.paymentMethod,
+              price: order.price,
+            };
+          }),
+        ),
       };
     } catch (error) {
       throw new HttpException(
