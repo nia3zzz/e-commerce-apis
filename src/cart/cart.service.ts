@@ -6,7 +6,22 @@ import {
   updateCartItemsZod,
 } from './cart.zod';
 import { decode } from 'jsonwebtoken';
-import { CartItems, Carts, Products } from '@prisma/client';
+import { CartItems, Carts, Categorys, Products } from '@prisma/client';
+
+export interface ICartItem {
+  id: string;
+  product: {
+    id: string;
+    name: string;
+    productPrice: number;
+    categoryName: string;
+    stock: number;
+    imagesUrl: string[];
+  };
+  quantity: number;
+  price: number;
+  createdAt: Date;
+}
 
 @Injectable()
 export class CartService {
@@ -15,7 +30,11 @@ export class CartService {
   addProductToCart = async (
     data: typeof addProductToCartZod,
     token: string,
-  ): Promise<{ state: string; message: string; data: CartItems }> => {
+  ): Promise<{
+    state: string;
+    message: string;
+    data: ICartItem;
+  }> => {
     const validateData = addProductToCartZod.safeParse(data);
 
     if (!validateData.success) {
@@ -49,6 +68,13 @@ export class CartService {
         HttpStatus.NOT_FOUND,
       );
     }
+
+    const foundCategory: Categorys | null =
+      await this.prisma.categorys.findUnique({
+        where: {
+          id: foundProduct.categoryId,
+        },
+      });
 
     let foundCart: Carts | null = await this.prisma.carts.findFirst({
       where: {
@@ -110,7 +136,20 @@ export class CartService {
       return {
         state: 'success',
         message: 'Product added to cart.',
-        data: cartItem,
+        data: {
+          id: cartItem.id,
+          product: {
+            id: foundProduct.id,
+            name: foundProduct.name,
+            productPrice: foundProduct.price,
+            categoryName: foundCategory?.name ?? '',
+            stock: foundProduct.stock,
+            imagesUrl: foundProduct.imagesUrl,
+          },
+          quantity: cartItem.quantity,
+          price: cartItem.price,
+          createdAt: cartItem.createdAt,
+        },
       };
     } catch (error) {
       throw new HttpException(
@@ -125,7 +164,7 @@ export class CartService {
 
   getCartItems = async (
     token: string,
-  ): Promise<{ state: string; message: string; data?: CartItems[] }> => {
+  ): Promise<{ state: string; message: string; data?: ICartItem[] }> => {
     const decoded: any = decode(token);
     const userId: string = decoded?.id;
 
@@ -151,11 +190,48 @@ export class CartService {
     return {
       state: 'success',
       message: 'Products found in cart.',
-      data: cartItems,
+      data: await Promise.all(
+        cartItems.map(async (cartItem) => {
+          const foundProduct: Products | null =
+            await this.prisma.products.findUnique({
+              where: {
+                id: cartItem.productId,
+              },
+            });
+
+          const foundCategory: Categorys | null =
+            await this.prisma.categorys.findUnique({
+              where: {
+                id: foundProduct?.categoryId,
+              },
+            });
+
+          return {
+            id: cartItem.id,
+            product: {
+              id: foundProduct?.id ?? '',
+              name: foundProduct?.name ?? '',
+              productPrice: foundProduct?.price ?? 0,
+              categoryName: foundCategory?.name ?? '',
+              stock: foundProduct?.stock ?? 0,
+              imagesUrl: foundProduct?.imagesUrl ?? [],
+            },
+            quantity: cartItem.quantity,
+            price: cartItem.price,
+            createdAt: cartItem.createdAt,
+          };
+        }),
+      ),
     };
   };
 
-  updateCartItem = async (data: typeof updateCartItemsZod) => {
+  updateCartItem = async (
+    data: typeof updateCartItemsZod,
+  ): Promise<{
+    state: string;
+    message: string;
+    data: ICartItem;
+  }> => {
     const validateData = updateCartItemsZod.safeParse(data);
 
     if (!validateData.success) {
@@ -214,10 +290,28 @@ export class CartService {
         },
       });
 
+      const foundCategory: Categorys | null =
+        await this.prisma.categorys.findUnique({
+          where: { id: product.categoryId },
+        });
+
       return {
         state: 'success',
         message: 'Cart item updated.',
-        data: updatedCartItem,
+        data: {
+          id: updatedCartItem.id,
+          product: {
+            id: product.id,
+            name: product.name,
+            productPrice: product.price,
+            categoryName: foundCategory?.name ?? '',
+            stock: product.stock,
+            imagesUrl: product.imagesUrl,
+          },
+          quantity: updatedCartItem.quantity,
+          price: updatedCartItem.price,
+          createdAt: updatedCartItem.createdAt,
+        },
       };
     } catch (error) {
       throw new HttpException(
@@ -230,7 +324,12 @@ export class CartService {
     }
   };
 
-  removeCartItem = async (data: typeof removeCartItemZod) => {
+  removeCartItem = async (
+    data: typeof removeCartItemZod,
+  ): Promise<{
+    state: string;
+    message: string;
+  }> => {
     const validateData = removeCartItemZod.safeParse(data);
 
     if (!validateData.success) {
