@@ -4,7 +4,6 @@ import {
   Carts,
   OrderItems,
   Orders,
-  Products,
   Sessions,
   Users,
 } from '@prisma/client';
@@ -18,7 +17,6 @@ import { AuthService } from 'src/auth/auth.service';
 import { decode } from 'jsonwebtoken';
 import cloudinary from 'src/cloudinary/cloudinary';
 import { UploadApiResponse } from 'cloudinary';
-import { promise } from 'zod';
 
 export interface IProfileData {
   firstName: string;
@@ -43,7 +41,6 @@ export class UserService {
   ): Promise<{
     state: string;
     message: string;
-    data: Users;
   }> => {
     const validateData = createUserZod.safeParse(data);
 
@@ -95,7 +92,7 @@ export class UserService {
         validateData.data.password,
       );
 
-      const user: Users = await this.prisma.users.create({
+      await this.prisma.users.create({
         data: {
           firstName: validateData.data.firstName,
           lastName: validateData.data.lastName,
@@ -108,7 +105,6 @@ export class UserService {
       return {
         state: 'success',
         message: 'User has been created.',
-        data: user,
       };
     } catch (error) {
       throw new HttpException(
@@ -189,7 +185,12 @@ export class UserService {
     }
   };
 
-  logout = async (token: string): Promise<boolean> => {
+  logout = async (
+    token: string,
+  ): Promise<{
+    state: string;
+    message: string;
+  }> => {
     const decoded: any = decode(token);
 
     const userId: string = decoded.id;
@@ -207,7 +208,10 @@ export class UserService {
         },
       });
 
-      return true;
+      return {
+        state: 'success',
+        message: 'Logout successful.',
+      };
     } catch (error) {
       throw new HttpException(
         {
@@ -225,7 +229,9 @@ export class UserService {
   ): Promise<{
     state: string;
     message: string;
-    data: Users;
+    data: {
+      profileImageUrl: string;
+    };
   }> => {
     const validateData = updateProfilePictureZod.safeParse(data);
 
@@ -262,7 +268,9 @@ export class UserService {
       return {
         state: 'success',
         message: 'Profile picture has been updated.',
-        data: userUpdatedDocument,
+        data: {
+          profileImageUrl: userUpdatedDocument.profileImageUrl,
+        },
       };
     } catch (error) {
       throw new HttpException(
@@ -280,7 +288,9 @@ export class UserService {
   ): Promise<{
     state: string;
     message: string;
-    data: Users;
+    data: {
+      profileImageUrl: string;
+    };
   }> => {
     const decoded: any = decode(token);
 
@@ -319,7 +329,9 @@ export class UserService {
       return {
         state: 'success',
         message: 'Profile picture has been removed.',
-        data: updateUserDocument,
+        data: {
+          profileImageUrl: updateUserDocument.profileImageUrl,
+        },
       };
     } catch (error) {
       throw new HttpException(
