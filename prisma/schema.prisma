@@ -38,7 +38,6 @@ model Products {
     updatedAt     DateTime     @updatedAt
     category      Categorys    @relation(fields: [categoryId], references: [id])
     orderItems    OrderItems[]
-    reviews       Reviews[]
     cartItems     CartItems[]
 }
 
@@ -86,18 +85,19 @@ model OrderItems {
     updatedAt         DateTime      @updatedAt
     order             Orders        @relation(fields: [orderId], references: [id])
     product           Products      @relation(fields: [productId], references: [id])
+    reviews           Reviews[]
 }
 
 model Reviews {
-    id        String   @id @default(uuid())
-    productId String
-    userId    String
-    rating    Int
-    comment   String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    product   Products @relation(fields: [productId], references: [id])
-    user      Users    @relation(fields: [userId], references: [id])
+    id          String     @id @default(uuid())
+    orderItemId String
+    userId      String
+    rating      Int
+    comment     String
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+    orderItem   OrderItems @relation(fields: [orderItemId], references: [id])
+    user        Users      @relation(fields: [userId], references: [id])
 }
 
 model Carts {

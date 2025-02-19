@@ -15,6 +15,7 @@ import {
   updateCategoryZod,
   createProductZod,
   updateProductZod,
+  updateOrderZod,
 } from './admin.zod';
 import { AdminAuthGuard } from './admin.guard';
 import { FormDataRequest, FileSystemStoredFile } from 'nestjs-form-data';
@@ -110,5 +111,11 @@ export class AdminController {
   @Get('/order/:id')
   getOrder(@Param() params: any) {
     return this.adminService.getOrder(params.id);
+  }
+
+  @UseGuards(AdminAuthGuard)
+  @Put('/order/:id')
+  updateOrder(@Param() params: any, @Body() data: typeof updateOrderZod) {
+    return this.adminService.updateOrder(data, params.id);
   }
 }
