@@ -1,4 +1,7 @@
 import type { Config } from 'jest';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 const config: Config = {
   moduleFileExtensions: ['ts', 'js', 'json'],
